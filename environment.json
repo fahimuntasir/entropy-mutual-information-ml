@@ -1,0 +1,10 @@
+{
+  "python": "3.12.15",
+  "numpy": "2.3.5",
+  "scipy": "1.17.0",
+  "scikit-learn": "1.8.0",
+  "true_signal_mi": 0.2780719051126377,
+  "repeats": 30,
+  "calibration_repeats": 200,
+  "test_size": 5000
+}
