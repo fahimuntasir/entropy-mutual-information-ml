@@ -1,0 +1,37 @@
+name: Research V3 real-world validation
+
+on:
+  push:
+    branches:
+      - research-v3-real-world-validation
+    paths:
+      - 'research_v3/**'
+      - '.github/workflows/research_v3.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout isolated research branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Run UCI real-world comparisons
+        run: |
+          python research_v3/real_world_validation.py --repeats 3 --folds 5 --features 5
+      - name: Upload all original fold results and figures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-v3-uci-results
+          path: research_v3/outputs/
+          if-no-files-found: warn
