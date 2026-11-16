@@ -60,5 +60,6 @@ jobs:
           name: information-theory-research-v6-complete
           path: |
             research_v6/
+            docs/RESEARCH_V6_NOVELTY_ASSESSMENT.md
             requirements.txt
           if-no-files-found: warn
