@@ -1,0 +1,57 @@
+name: Research V5 nested validation
+
+on:
+  push:
+    branches:
+      - research-v5-nested-validation
+    paths:
+      - 'research_v5/**'
+      - '.github/workflows/research_v5.yml'
+  workflow_dispatch:
+
+jobs:
+  nested-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Checkout isolated research branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install project scientific dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Test datasets and training-only tuning
+        run: |
+          python -m unittest discover -s research_v5/tests -v
+      - name: Run nested cross-validation on five datasets
+        run: |
+          python research_v5/nested_validation.py --outer-folds 3 --outer-repeats 2 --inner-folds 2
+      - name: Check expected raw results exist
+        run: |
+          python -c "import pandas as pd; x=pd.read_csv('research_v5/outputs/outer_fold_results.csv'); assert len(x)==240 and set(x.dataset)=={'breast-cancer','ionosphere','sonar','spambase','digits-3-vs-8'}; y=pd.read_csv('research_v5/outputs/exact_dataset_level_tests.csv'); assert len(y)==2"
+      - name: Upload complete reproducible V5 experiment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: information-theory-research-v5-nested
+          path: |
+            research_v5/
+            research_v3/real_world_validation.py
+            research_v3/data/ionosphere.csv
+            research_v3/README.md
+            research_v4/robustness_analysis.py
+            research_v4/README.md
+            requirements.txt
+          if-no-files-found: warn
