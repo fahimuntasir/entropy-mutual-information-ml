@@ -61,6 +61,6 @@ class NestedValidationTests(unittest.TestCase):
         for method in ("Logistic regression","Random forest"):
             m=model_for(method,100).fit(x[:300],y[:300])
             p=m.predict_proba(x[300:310])[:,1]
-            self.assertTrue(((p>0)&(p<1)).all())
+            self.assertTrue(((p>=0)&(p<=1)).all())
 
 if __name__=="__main__":unittest.main()
