@@ -1,0 +1,63 @@
+name: Research V7 unlabeled sensor reliability
+
+on:
+  push:
+    branches: [research-v7-label-free-sensor-adaptation]
+    paths:
+      - 'research_v7/**'
+      - '.github/workflows/research_v7.yml'
+      - 'docs/RESEARCH_V7_NOVELTY_ASSESSMENT.md'
+  workflow_dispatch:
+
+jobs:
+  stress-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Checkout isolated V7
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install scientific dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Run V7 verification tests
+        run: python -m unittest discover -s research_v7/tests -v
+      - name: Run preregistered V7 stress tests
+        run: python research_v7/adaptive_reliability.py --trials 100 --test-size 4000
+      - name: Validate saved rows and analysis
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          base='research_v7/outputs/'
+          raw=pd.read_csv(base+'trial_results.csv')
+          summary=pd.read_csv(base+'method_summary.csv')
+          paired=pd.read_csv(base+'paired_comparisons.csv')
+          planned=pd.read_csv(base+'planned_tests.csv')
+          assert len(raw)==12600,(len(raw))
+          assert len(summary)==126,(len(summary))
+          assert len(paired)==126,(len(paired))
+          assert len(planned)==4
+          assert raw.groupby(['scenario','window','method']).size().eq(100).all()
+          print('V7 counts validated; test labels were used only for scoring')
+          PY
+      - name: Upload source, results and novelty analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: information-theory-research-v7-complete
+          path: |
+            research_v7/
+            docs/RESEARCH_V7_NOVELTY_ASSESSMENT.md
+            requirements.txt
+          if-no-files-found: warn
