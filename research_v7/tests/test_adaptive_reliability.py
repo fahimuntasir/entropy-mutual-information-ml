@@ -74,5 +74,16 @@ class AdaptiveReliabilityTests(unittest.TestCase):
         b=run_trials(2,120,windows=(50,),scenarios=subset)
         self.assertTrue(a.equals(b))
 
+
+    def test_exact_unlabeled_nonidentifiability_witness(self):
+        from identifiability_witness import witness_rows
+        rows=witness_rows()
+        self.assertEqual(len(rows),4)
+        self.assertTrue(all(abs(r["unlabeled_probability_A"] -
+                                r["unlabeled_probability_B"])<1e-13 for r in rows))
+        contradiction=next(r for r in rows if r["x1"]==1 and r["x2"]==0)
+        self.assertGreater(contradiction["true_posterior_A"],.7)
+        self.assertLess(contradiction["true_posterior_B"],.5)
+
 if __name__=="__main__":
     unittest.main()
