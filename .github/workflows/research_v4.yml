@@ -1,0 +1,55 @@
+name: Research V4 robustness and statistical verification
+
+on:
+  push:
+    branches: [research-v4-robustness-statistics]
+    paths:
+      - 'research_v4/**'
+      - '.github/workflows/research_v4.yml'
+  workflow_dispatch:
+
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - name: Checkout independent Research V4 branch
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned scientific dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Verify unchanged V3 tests
+        run: python -m unittest discover -s research_v3/tests -v
+      - name: Verify V4 tests
+        run: python -m unittest discover -s research_v4/tests -v
+      - name: Recreate Research V3 reference outcomes
+        run: python research_v3/real_world_validation.py
+      - name: Run Research V4 robustness and corrected tests
+        run: python research_v4/robustness_analysis.py
+      - name: Ensure V3 baseline comparison is present and exact
+        run: |
+          python -c "import json; m=json.load(open('research_v4/outputs/experiment_metadata.json')); v=m['v3_comparison']; assert v and v['n_v3_rows']==240 and max(x for k,x in v.items() if k.startswith('max_difference_')) < 1e-12"
+      - name: Upload reproducible Research V4 package and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: information-theory-research-v4-complete
+          path: |
+            research_v4/
+            research_v3/real_world_validation.py
+            research_v3/data/ionosphere.csv
+            research_v3/README.md
+            research_v3/outputs/fold_results.csv
+            requirements.txt
+          if-no-files-found: warn
